@@ -2,8 +2,9 @@
 
 :root {
   --civic-navy: #1B365D;
-  --civic-navy-dark: #12243F;
+  --civic-navy-dark: #0C1E3A;
   --civic-navy-light: #2A4D7E;
+  --civic-gold: #D97706;
   --background: #F8FAFC;
   --foreground: #0F172A;
 }
@@ -13,6 +14,27 @@ body {
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Serif font style for formal municipal proposal document canvas */
+.font-proposal {
+  font-family: "Charter", "Bitstream Charter", "Sitka Text", "Cambria", Georgia, serif;
+}
+
+/* Document Paper Canvas styling */
+.paper-sheet {
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(226, 232, 240, 0.8);
+}
+
+/* Pulse glow animations for real-time compliance */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Custom scrollbars */
