@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   ShieldCheck,
@@ -33,6 +33,12 @@ export default function Homepage({
   onLoadSampleAndLaunch,
   onNavigateTab
 }: HomepageProps) {
+  const [currentYear, setCurrentYear] = useState<number>(2026);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* ----------------- CLEAN STICKY HEADER ----------------- */}
@@ -399,7 +405,7 @@ export default function Homepage({
           </div>
 
           <div className="text-[11px] text-slate-500">
-            © {new Date().getFullYear()} CivicScribe. Built with FastAPI, Next.js, and Google Antigravity SDK.
+            © {currentYear} CivicScribe. Built with FastAPI, Next.js, and Google Antigravity SDK.
           </div>
         </div>
       </footer>

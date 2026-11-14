@@ -118,14 +118,35 @@ export default function CivicScribeApp() {
   const [editedVault, setEditedVault] = useState<CompanyVault | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Fetch Company Vault & Monitor Data on load
   useEffect(() => {
+    setIsMounted(true);
     fetchVault();
     fetchMonitorData();
     const timer = setInterval(fetchMonitorData, 30000); // 30-second live sync
     return () => clearInterval(timer);
   }, []);
+
+  const formatTimeSafe = (isoString?: string) => {
+    if (!isMounted || !isoString) return "";
+    try {
+      return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return "";
+    }
+  };
+
+  const formatDateSafe = (isoString?: string) => {
+    if (!isMounted || !isoString) return "";
+    try {
+      const d = new Date(isoString);
+      return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } catch {
+      return "";
+    }
+  };
 
   const fetchMonitorData = async () => {
     try {
@@ -2172,7 +2193,7 @@ export default function CivicScribeApp() {
 
                         <div className="flex items-center gap-2 text-[11px] text-slate-400">
                           <Clock className="w-3.5 h-3.5" />
-                          <span>Last Polled: {new Date(sol.last_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>Last Polled: {formatTimeSafe(sol.last_updated_at)}</span>
                         </div>
                       </div>
 
@@ -2248,7 +2269,7 @@ export default function CivicScribeApp() {
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-slate-800">{h.change_type}</span>
                                         <span className="text-[10px] text-slate-400">
-                                          {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          {formatDateSafe(h.timestamp)}
                                         </span>
                                       </div>
                                       <p className="text-slate-700">{h.summary}</p>
