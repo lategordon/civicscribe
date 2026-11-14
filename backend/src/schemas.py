@@ -72,3 +72,75 @@ class AnalyzeRFPResponse(BaseModel):
     download_url: str
     execution_time_seconds: float
     message: str
+
+
+# --- Proactive Portal Monitor Models ---
+
+class MonitoredPortal(BaseModel):
+    id: str
+    name: str
+    jurisdiction: str
+    portal_url: str
+    target_trades: List[str]
+    check_interval_minutes: int
+    last_checked_at: Optional[str] = None
+    status: str
+    solicitations_count: int
+    created_at: str
+
+class AddPortalRequest(BaseModel):
+    name: str
+    jurisdiction: str
+    portal_url: str
+    target_trades: List[str]
+    check_interval_minutes: int = 60
+
+class ChangeHistoryItem(BaseModel):
+    timestamp: str
+    change_type: str
+    summary: str
+
+class DiscoveredSolicitation(BaseModel):
+    id: str
+    portal_id: str
+    solicitation_number: str
+    title: str
+    agency: str
+    trade_category: str
+    estimated_value: Optional[str] = ""
+    submission_deadline: str
+    status: str
+    latest_change_type: Optional[str] = "NONE"
+    latest_change_summary: Optional[str] = ""
+    change_history: List[ChangeHistoryItem] = Field(default_factory=list)
+    source_url: str
+    pdf_path: Optional[str] = ""
+    compliance_verdict: Optional[str] = "UNAUDITED"
+    first_detected_at: str
+    last_updated_at: str
+    portal_name: Optional[str] = ""
+    jurisdiction: Optional[str] = ""
+
+class MonitorOverview(BaseModel):
+    active_portals_count: int
+    total_solicitations_count: int
+    recent_changes_count: int
+    go_opportunities_count: int
+    last_monitored_at: str
+
+class DetectedEventItem(BaseModel):
+    solicitation_number: str
+    title: str
+    agency: str
+    change_type: str
+    summary: str
+    timestamp: str
+
+class ScanPortalsResponse(BaseModel):
+    success: bool
+    scanned_at: str
+    portals_scanned: int
+    changes_detected_count: int
+    detected_events: List[DetectedEventItem]
+    overview: MonitorOverview
+    message: str

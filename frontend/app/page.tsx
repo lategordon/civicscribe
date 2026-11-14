@@ -32,7 +32,15 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Search,
-  FileCode
+  FileCode,
+  Radio,
+  Globe,
+  Compass,
+  History,
+  Layers,
+  Plus,
+  Trash2,
+  DollarSign
 } from "lucide-react";
 import {
   ComplianceMatrix,
@@ -43,13 +51,40 @@ import {
   RubricItem,
   RequiredFormItem,
   ProposalSection,
-  ComplianceStatusType
+  ComplianceStatusType,
+  MonitoredPortal,
+  DiscoveredSolicitation,
+  MonitorOverview,
+  ScanPortalsResponse
 } from "./types";
+import Homepage from "./components/Homepage";
 
 const API_BASE = "http://localhost:8000";
 
 export default function CivicScribeApp() {
-  const [activeTab, setActiveTab] = useState<"audit" | "scorecard" | "vault">("audit");
+  const [viewMode, setViewMode] = useState<"home" | "app">("home");
+  const [activeTab, setActiveTab] = useState<"audit" | "scorecard" | "vault" | "monitor">("monitor");
+
+  // Proactive Portal Monitor State
+  const [monitorOverview, setMonitorOverview] = useState<MonitorOverview | null>(null);
+  const [monitoredPortals, setMonitoredPortals] = useState<MonitoredPortal[]>([]);
+  const [discoveredSolicitations, setDiscoveredSolicitations] = useState<DiscoveredSolicitation[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanNotification, setScanNotification] = useState<string | null>(null);
+  const [monitorCategoryFilter, setMonitorCategoryFilter] = useState<string>("All");
+  const [monitorStatusFilter, setMonitorStatusFilter] = useState<string>("All");
+  const [showAddPortalModal, setShowAddPortalModal] = useState(false);
+  const [showPortalsListModal, setShowPortalsListModal] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [isAuditingDiscovered, setIsAuditingDiscovered] = useState<string | null>(null);
+
+  // New Portal Form State
+  const [newPortalName, setNewPortalName] = useState("");
+  const [newPortalJurisdiction, setNewPortalJurisdiction] = useState("");
+  const [newPortalUrl, setNewPortalUrl] = useState("");
+  const [newPortalTrades, setNewPortalTrades] = useState<string[]>(["Landscaping & Grounds"]);
+  const [newPortalInterval, setNewPortalInterval] = useState(60);
+  const [isSubmittingPortal, setIsSubmittingPortal] = useState(false);
 
   // Audit & Generation State
   const [file, setFile] = useState<File | null>(null);
@@ -80,10 +115,113 @@ export default function CivicScribeApp() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch Company Vault on load
+  // Fetch Company Vault & Monitor Data on load
   useEffect(() => {
     fetchVault();
+    fetchMonitorData();
+    const timer = setInterval(fetchMonitorData, 30000); // 30-second live sync
+    return () => clearInterval(timer);
   }, []);
+
+  const fetchMonitorData = async () => {
+    try {
+      const [overviewRes, portalsRes, solicitationsRes] = await Promise.all([
+        fetch(`${API_BASE}/api/monitor/overview`),
+        fetch(`${API_BASE}/api/monitor/portals`),
+        fetch(`${API_BASE}/api/monitor/solicitations`)
+      ]);
+      if (overviewRes.ok) setMonitorOverview(await overviewRes.json());
+      if (portalsRes.ok) setMonitoredPortals(await portalsRes.json());
+      if (solicitationsRes.ok) setDiscoveredSolicitations(await solicitationsRes.json());
+    } catch (err) {
+      console.warn("Could not load proactive monitor data:", err);
+    }
+  };
+
+  const handleTriggerScan = async () => {
+    try {
+      setIsScanning(true);
+      setScanNotification(null);
+      const res = await fetch(`${API_BASE}/api/monitor/scan`, { method: "POST" });
+      if (res.ok) {
+        const data: ScanPortalsResponse = await res.json();
+        await fetchMonitorData();
+        setScanNotification(data.message);
+        setTimeout(() => setScanNotification(null), 6000);
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
+      alert("Error scanning portals. Check server connection.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleAddPortal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPortalName.trim() || !newPortalUrl.trim()) return;
+    try {
+      setIsSubmittingPortal(true);
+      const res = await fetch(`${API_BASE}/api/monitor/portals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newPortalName.trim(),
+          jurisdiction: newPortalJurisdiction.trim() || "Local Municipality",
+          portal_url: newPortalUrl.trim(),
+          target_trades: newPortalTrades,
+          check_interval_minutes: Number(newPortalInterval)
+        })
+      });
+      if (res.ok) {
+        setShowAddPortalModal(false);
+        setNewPortalName("");
+        setNewPortalJurisdiction("");
+        setNewPortalUrl("");
+        await fetchMonitorData();
+        setScanNotification("New municipal portal successfully registered for autonomous scanning.");
+        setTimeout(() => setScanNotification(null), 5000);
+      }
+    } catch (err) {
+      console.error("Failed to add portal:", err);
+      alert("Failed to add portal.");
+    } finally {
+      setIsSubmittingPortal(false);
+    }
+  };
+
+  const handleDeletePortal = async (portalId: string) => {
+    if (!confirm("Are you sure you want to stop monitoring this municipal portal?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/monitor/portals/${portalId}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchMonitorData();
+      }
+    } catch (err) {
+      console.error("Failed to delete portal:", err);
+    }
+  };
+
+  const handleAuditDiscoveredSolicitation = async (solicitationId: string) => {
+    try {
+      setIsAuditingDiscovered(solicitationId);
+      setErrorMsg(null);
+      const res = await fetch(`${API_BASE}/api/monitor/audit-discovered/${solicitationId}`, { method: "POST" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to audit discovered solicitation.");
+      }
+      const data: AnalyzeRFPResponse = await res.json();
+      setResult(data);
+      setActiveTab("scorecard");
+      setActiveSectionIdx(-1);
+      await fetchMonitorData();
+    } catch (err: any) {
+      alert(err.message || "Audit failed.");
+    } finally {
+      setIsAuditingDiscovered(null);
+    }
+  };
 
   const fetchVault = async () => {
     try {
@@ -331,6 +469,24 @@ export default function CivicScribeApp() {
     return item.status === disqualifierFilter;
   }) || [];
 
+  if (viewMode === "home") {
+    return (
+      <Homepage
+        vault={vault}
+        onLaunchApp={() => setViewMode("app")}
+        onLoadSampleAndLaunch={async () => {
+          await handleLoadSampleRFP();
+          setViewMode("app");
+          setActiveTab("audit");
+        }}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          setViewMode("app");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* ----------------- CIVIC PRECISION HEADER / TOP NAV ----------------- */}
@@ -338,7 +494,7 @@ export default function CivicScribeApp() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Identity */}
-            <div className="flex items-center space-x-3.5">
+            <div className="flex items-center space-x-3.5 cursor-pointer" onClick={() => setViewMode("home")}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-[#1B365D] flex items-center justify-center border border-white/20 shadow-inner">
                 <Shield className="w-6 h-6 text-white" />
               </div>
@@ -355,28 +511,61 @@ export default function CivicScribeApp() {
               </div>
             </div>
 
-            {/* Active Verified Vendor Badge */}
-            <div className="hidden lg:flex items-center space-x-3 text-xs bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/15 backdrop-blur-xs">
-              <div className="flex items-center space-x-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-slate-300">Verified Profile:</span>
-                <span className="font-semibold text-white">
-                  {vault?.company_name || "Bay Vista Municipal Grounds, Inc."}
+            {/* Back to Home Button & Active Verified Vendor Badge */}
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setViewMode("home")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-all border border-white/15"
+              >
+                <span>← Overview / Home</span>
+              </button>
+
+              <div className="hidden lg:flex items-center space-x-3 text-xs bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/15 backdrop-blur-xs">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-slate-300">Verified Profile:</span>
+                  <span className="font-semibold text-white">
+                    {vault?.company_name || "Bay Vista Municipal Grounds, Inc."}
+                  </span>
+                </div>
+                <span className="text-white/20">|</span>
+                <span className="font-mono text-emerald-300 font-medium">CSLB #984210</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  96% Ready
                 </span>
               </div>
-              <span className="text-white/20">|</span>
-              <span className="font-mono text-emerald-300 font-medium">CSLB #984210</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                96% Ready
-              </span>
             </div>
           </div>
 
           {/* Navigation Bar Tabs */}
-          <div className="flex space-x-2 border-t border-white/10 pt-1.5 pb-2.5">
+          <div className="flex space-x-2 border-t border-white/10 pt-1.5 pb-2.5 overflow-x-auto">
+            <button
+              onClick={() => setViewMode("home")}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide text-slate-300 hover:bg-white/10 hover:text-white transition-all shrink-0"
+            >
+              <span>🏠 Overview</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("monitor")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
+                activeTab === "monitor"
+                  ? "bg-white text-[#0C1E3A] shadow-md"
+                  : "text-slate-200 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Radio className={`w-4 h-4 ${activeTab === "monitor" ? "text-emerald-600" : "text-amber-400"} animate-pulse`} />
+              <span>📡 Proactive Portal Monitor</span>
+              {monitorOverview && monitorOverview.recent_changes_count > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950">
+                  {monitorOverview.recent_changes_count} Updates
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setActiveTab("audit")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
                 activeTab === "audit"
                   ? "bg-white text-[#0C1E3A] shadow-md"
                   : "text-slate-200 hover:bg-white/10 hover:text-white"
@@ -388,7 +577,7 @@ export default function CivicScribeApp() {
 
             <button
               onClick={() => setActiveTab("scorecard")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
                 activeTab === "scorecard"
                   ? "bg-white text-[#0C1E3A] shadow-md"
                   : "text-slate-200 hover:bg-white/10 hover:text-white"
@@ -405,7 +594,7 @@ export default function CivicScribeApp() {
 
             <button
               onClick={() => setActiveTab("vault")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
                 activeTab === "vault"
                   ? "bg-white text-[#0C1E3A] shadow-md"
                   : "text-slate-200 hover:bg-white/10 hover:text-white"
@@ -1676,7 +1865,594 @@ export default function CivicScribeApp() {
             ) : null}
           </div>
         )}
+
+        {/* ================= TAB 4: PROACTIVE PORTAL MONITOR ================= */}
+        {activeTab === "monitor" && (
+          <div className="space-y-6">
+            {/* Real-time Scan Notification Alert */}
+            {scanNotification && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{scanNotification}</span>
+                </div>
+                <button
+                  onClick={() => setScanNotification(null)}
+                  className="text-emerald-700 hover:text-emerald-950 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Header Radar HUD Banner */}
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-emerald-50/40 via-blue-50/30 to-transparent pointer-events-none" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      Autonomous Web Crawler Active
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Continuous Municipal Procurement Polling
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    Proactive Municipal Procurement Radar
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                    CivicScribe’s proactive agent routinely checks local city, county, and authority procurement websites for new solicitations, addenda, and deadline changes — logging detected updates directly into your opportunity database so you never miss an amendment or bidding window.
+                  </p>
+                </div>
+
+                {/* Control Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                    onClick={handleTriggerScan}
+                    disabled={isScanning}
+                    className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                      isScanning
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-[#0C1E3A] hover:bg-[#1B365D] text-white active:scale-98"
+                    }`}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin text-blue-400" : "text-emerald-400"}`} />
+                    <span>{isScanning ? "Scanning Municipal Portals..." : "Check Portals Now"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowPortalsListModal(true)}
+                    className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Portals ({monitoredPortals.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowAddPortalModal(true)}
+                    className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Track New Portal</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* KPI Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Monitored Portals
+                  </span>
+                  <Globe className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {monitorOverview?.active_portals_count ?? monitoredPortals.length}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Active municipal boards
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Indexed Solicitations
+                  </span>
+                  <Layers className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {monitorOverview?.total_solicitations_count ?? discoveredSolicitations.length}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Stored in local database
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Recent Changes
+                  </span>
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                </div>
+                <div className="text-2xl font-bold text-amber-600">
+                  {monitorOverview?.recent_changes_count ?? 3}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Addenda & deadline shifts
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Qualified 'GO' Leads
+                  </span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {monitorOverview?.go_opportunities_count ?? 1}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Matched to company vault
+                </p>
+              </div>
+            </div>
+
+            {/* Filter and Control Bar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Status Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                {[
+                  { label: "All Opportunities", val: "All" },
+                  { label: "New Postings", val: "NEW" },
+                  { label: "Addenda & Revisions", val: "ADDENDUM_POSTED" },
+                  { label: "Deadline Extended", val: "DEADLINE_EXTENDED" }
+                ].map(tab => (
+                  <button
+                    key={tab.val}
+                    onClick={() => setMonitorStatusFilter(tab.val)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                      monitorStatusFilter === tab.val
+                        ? "bg-[#0C1E3A] text-white shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Trade Category Dropdown */}
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <span className="text-xs text-slate-500 font-medium">Trade:</span>
+                <select
+                  value={monitorCategoryFilter}
+                  onChange={e => setMonitorCategoryFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="All">All Trade Categories</option>
+                  <option value="Landscaping">Landscaping & Grounds</option>
+                  <option value="Janitorial">Janitorial & Custodial</option>
+                  <option value="HVAC">HVAC & Mechanical</option>
+                  <option value="Facility">Facility Maintenance</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Discovered Solicitations Feed */}
+            <div className="space-y-4">
+              {discoveredSolicitations
+                .filter(s => {
+                  if (monitorStatusFilter !== "All" && s.status !== monitorStatusFilter) return false;
+                  if (monitorCategoryFilter !== "All" && !s.trade_category.toLowerCase().includes(monitorCategoryFilter.toLowerCase())) return false;
+                  return true;
+                })
+                .map(sol => {
+                  const isAuditing = isAuditingDiscovered === sol.id;
+                  const isHistoryExpanded = expandedHistoryId === sol.id;
+
+                  // Status badge helper
+                  const renderStatusPill = () => {
+                    switch (sol.status) {
+                      case "NEW":
+                        return (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-emerald-600" />
+                            NEW SOLICITATION
+                          </span>
+                        );
+                      case "ADDENDUM_POSTED":
+                        return (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            ADDENDUM POSTED
+                          </span>
+                        );
+                      case "DEADLINE_EXTENDED":
+                        return (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            DEADLINE EXTENDED
+                          </span>
+                        );
+                      default:
+                        return (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            ACTIVE
+                          </span>
+                        );
+                    }
+                  };
+
+                  return (
+                    <div
+                      key={sol.id}
+                      className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs hover:shadow-md transition-shadow space-y-4"
+                    >
+                      {/* Top Header Row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {renderStatusPill()}
+                          <span className="font-mono text-xs font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                            {sol.solicitation_number}
+                          </span>
+                          <span className="text-xs text-slate-500 font-medium">
+                            • {sol.agency} ({sol.jurisdiction || "Local Public Works"})
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Last Polled: {new Date(sol.last_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+
+                      {/* Main Title & Details */}
+                      <div className="space-y-2">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                          {sol.title}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-700">
+                            {sol.trade_category}
+                          </span>
+
+                          {sol.estimated_value && (
+                            <span className="flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              <DollarSign className="w-3.5 h-3.5" />
+                              {sol.estimated_value}
+                            </span>
+                          )}
+
+                          <span className="flex items-center gap-1 font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            Strict Due Date: <strong className="text-slate-900 ml-0.5">{sol.submission_deadline}</strong>
+                          </span>
+
+                          {sol.compliance_verdict && sol.compliance_verdict !== "UNAUDITED" && (
+                            <span className="ml-auto">
+                              {renderVerdictBadge(sol.compliance_verdict as any, "sm")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Proactive Change Alert Box */}
+                      {sol.latest_change_summary && (
+                        <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-50/80 to-blue-50/60 border border-amber-200/80 text-xs flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5 flex-1">
+                            <span className="font-bold text-amber-950 uppercase tracking-wide text-[10px]">
+                              Autonomous Crawler Change Detection Log:
+                            </span>
+                            <p className="text-slate-800 font-medium leading-relaxed">
+                              {sol.latest_change_summary}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Expandable Change History Trail */}
+                      {sol.change_history && sol.change_history.length > 0 && (
+                        <div className="pt-1">
+                          <button
+                            onClick={() => setExpandedHistoryId(isHistoryExpanded ? null : sol.id)}
+                            className="flex items-center gap-1.5 text-xs text-blue-700 hover:text-blue-900 font-semibold"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                            <span>
+                              {isHistoryExpanded ? "Hide Change History" : `View Change History (${sol.change_history.length} logged)`}
+                            </span>
+                          </button>
+
+                          {isHistoryExpanded && (
+                            <div className="mt-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs animate-in fade-in">
+                              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block border-b pb-1">
+                                Complete Municipal Change Audit Trail:
+                              </span>
+                              <div className="space-y-2 pt-1">
+                                {sol.change_history.map((h, idx) => (
+                                  <div key={idx} className="flex items-start gap-2 text-slate-600">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-800">{h.change_type}</span>
+                                        <span className="text-[10px] text-slate-400">
+                                          {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                      </div>
+                                      <p className="text-slate-700">{h.summary}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action Row */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <Compass className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Source Board: <strong className="text-slate-700">{sol.portal_name || "Municipal Procurement"}</strong></span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={sol.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 transition-all"
+                          >
+                            <span>Official Portal</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+
+                          <button
+                            onClick={() => handleAuditDiscoveredSolicitation(sol.id)}
+                            disabled={isAuditing}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs ${
+                              isAuditing
+                                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                : "bg-[#0C1E3A] hover:bg-[#1B365D] text-white active:scale-98"
+                            }`}
+                          >
+                            {isAuditing ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                                <span>Executing Compliance Audit...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                <span>1-Click Compliance Audit & Bid Proposal</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {discoveredSolicitations.length === 0 && (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 space-y-3">
+                  <Globe className="w-8 h-8 mx-auto text-slate-300" />
+                  <p className="font-semibold text-sm">No municipal solicitations found matching your filter criteria.</p>
+                  <button
+                    onClick={() => { setMonitorStatusFilter("All"); setMonitorCategoryFilter("All"); }}
+                    className="text-xs text-blue-700 hover:underline font-bold"
+                  >
+                    Reset all filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ----------------- MODAL: ADD MUNICIPAL PORTAL ----------------- */}
+      {showAddPortalModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Track New Municipal Procurement Portal
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAddPortalModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPortal} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Municipality / Agency Name:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., City of Dallas Public Works Solicitations"
+                  value={newPortalName}
+                  onChange={e => setNewPortalName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Jurisdiction / Region:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Dallas County, TX"
+                  value={newPortalJurisdiction}
+                  onChange={e => setNewPortalJurisdiction(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Official Procurement Portal URL:
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://dallascityhall.com/procurement/bids"
+                  value={newPortalUrl}
+                  onChange={e => setNewPortalUrl(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Target Trade Categories:
+                </label>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {["Landscaping & Grounds", "Janitorial & Custodial", "HVAC & Mechanical", "Facility Maintenance"].map(trade => (
+                    <label key={trade} className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newPortalTrades.includes(trade)}
+                        onChange={e => {
+                          if (e.target.checked) setNewPortalTrades([...newPortalTrades, trade]);
+                          else setNewPortalTrades(newPortalTrades.filter(t => t !== trade));
+                        }}
+                        className="rounded text-blue-600"
+                      />
+                      <span>{trade}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Autonomous Polling Interval:
+                </label>
+                <select
+                  value={newPortalInterval}
+                  onChange={e => setNewPortalInterval(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+                >
+                  <option value={30}>Every 30 Minutes (High Frequency)</option>
+                  <option value={60}>Every 60 Minutes (Standard)</option>
+                  <option value={120}>Every 2 Hours</option>
+                  <option value={360}>Every 6 Hours</option>
+                  <option value={1440}>Once Daily</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPortalModal(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPortal}
+                  className="px-4 py-2 text-xs font-bold rounded-lg bg-[#0C1E3A] hover:bg-[#1B365D] text-white flex items-center gap-1.5 shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isSubmittingPortal ? "Registering..." : "Start Monitoring Portal"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- MODAL: MONITORED PORTALS LIST ----------------- */}
+      {showPortalsListModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Active Monitored Municipal Portals ({monitoredPortals.length})
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowPortalsListModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 space-y-3 pr-1 text-xs">
+              {monitoredPortals.map(p => (
+                <div key={p.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{p.name}</h4>
+                      <p className="text-slate-500 text-[11px]">{p.jurisdiction}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeletePortal(p.id)}
+                      className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                      title="Stop Monitoring Portal"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <a
+                    href={p.portal_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-blue-700 hover:underline block truncate text-[11px]"
+                  >
+                    {p.portal_url}
+                  </a>
+
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-700">Target Trades:</span>
+                      <span>{p.target_trades.join(", ")}</span>
+                    </div>
+                    <div>
+                      Interval: <strong>Every {p.check_interval_minutes}m</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3 border-t flex justify-end">
+              <button
+                onClick={() => setShowPortalsListModal(false)}
+                className="px-4 py-2 text-xs font-bold rounded-lg bg-[#0C1E3A] text-white hover:bg-[#1B365D]"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ----------------- CITATION INSPECTION MODAL ----------------- */}
       {selectedCitation && (

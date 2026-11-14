@@ -194,3 +194,82 @@ export interface CompanyVault {
     };
   }>;
 }
+
+
+// --- Proactive Portal Monitor Frontend Types ---
+
+export interface MonitoredPortal {
+  id: string;
+  name: string;
+  jurisdiction: string;
+  portal_url: string;
+  target_trades: string[];
+  check_interval_minutes: number;
+  last_checked_at?: string;
+  status: "active" | "paused" | "error";
+  solicitations_count: number;
+  created_at: string;
+}
+
+export interface AddPortalRequest {
+  name: string;
+  jurisdiction: string;
+  portal_url: string;
+  target_trades: string[];
+  check_interval_minutes: number;
+}
+
+export interface ChangeHistoryItem {
+  timestamp: string;
+  change_type: "NEW_POSTING" | "ADDENDUM" | "DEADLINE_EXTENDED" | "NONE";
+  summary: string;
+}
+
+export interface DiscoveredSolicitation {
+  id: string;
+  portal_id: string;
+  solicitation_number: string;
+  title: string;
+  agency: string;
+  trade_category: string;
+  estimated_value?: string;
+  submission_deadline: string;
+  status: "NEW" | "ADDENDUM_POSTED" | "DEADLINE_EXTENDED" | "ACTIVE" | "ARCHIVED";
+  latest_change_type?: "NEW_POSTING" | "ADDENDUM" | "DEADLINE_EXTENDED" | "NONE";
+  latest_change_summary?: string;
+  change_history: ChangeHistoryItem[];
+  source_url: string;
+  pdf_path?: string;
+  compliance_verdict?: "UNAUDITED" | "GO" | "CONDITIONAL GO" | "NO-GO";
+  first_detected_at: string;
+  last_updated_at: string;
+  portal_name?: string;
+  jurisdiction?: string;
+}
+
+export interface MonitorOverview {
+  active_portals_count: number;
+  total_solicitations_count: number;
+  recent_changes_count: number;
+  go_opportunities_count: number;
+  last_monitored_at: string;
+}
+
+export interface DetectedEventItem {
+  solicitation_number: string;
+  title: string;
+  agency: string;
+  change_type: string;
+  summary: string;
+  timestamp: string;
+}
+
+export interface ScanPortalsResponse {
+  success: boolean;
+  scanned_at: string;
+  portals_scanned: number;
+  changes_detected_count: number;
+  detected_events: DetectedEventItem[];
+  overview: MonitorOverview;
+  message: string;
+}

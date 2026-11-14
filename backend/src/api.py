@@ -4,7 +4,7 @@ import json
 import shutil
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,12 +15,35 @@ from dotenv import load_dotenv
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
 load_dotenv(dotenv_path)
 
-from .schemas import ComplianceMatrix, CompleteBidDraft, AnalyzeRFPResponse
+from .schemas import (
+    ComplianceMatrix,
+    CompleteBidDraft,
+    AnalyzeRFPResponse,
+    MonitoredPortal,
+    AddPortalRequest,
+    DiscoveredSolicitation,
+    MonitorOverview,
+    ScanPortalsResponse
+)
 from .agents import shred_rfp, draft_bid_packet, load_company_vault, VAULT_PATH
 from .docx_builder import generate_docx_proposal
+from .db import (
+    init_db,
+    get_all_portals,
+    add_portal,
+    delete_portal,
+    get_all_solicitations,
+    get_solicitation_by_id,
+    update_solicitation_verdict,
+    get_monitor_overview
+)
+from .portal_crawler import scan_all_portals
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("civicscribe.api")
+
+# Initialize SQLite database
+init_db()
 
 app = FastAPI(
     title="CivicScribe API",
@@ -163,3 +186,107 @@ async def download_bid_packet(filename: str):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename=clean_filename
     )
+
+
+# ============================================================================
+# Proactive Municipal Portal Monitor Endpoints
+# ============================================================================
+
+@app.get("/api/monitor/overview", response_model=MonitorOverview)
+async def get_monitor_stats():
+    """Returns top-level metric counters for active municipal portals, solicitations, and recent changes."""
+    return get_monitor_overview()
+
+@app.get("/api/monitor/portals", response_model=List[MonitoredPortal])
+async def list_monitored_portals():
+    """Returns list of all configured municipal procurement websites being tracked."""
+    return get_all_portals()
+
+@app.post("/api/monitor/portals", response_model=MonitoredPortal)
+async def add_monitored_portal(req: AddPortalRequest):
+    """Adds a new municipal portal website to track."""
+    if not req.name.strip() or not req.portal_url.strip():
+        raise HTTPException(status_code=400, detail="Name and Portal URL are required.")
+    return add_portal(
+        name=req.name.strip(),
+        jurisdiction=req.jurisdiction.strip(),
+        portal_url=req.portal_url.strip(),
+        target_trades=req.target_trades,
+        check_interval_minutes=req.check_interval_minutes
+    )
+
+@app.delete("/api/monitor/portals/{portal_id}")
+async def remove_monitored_portal(portal_id: str):
+    """Deletes a tracked portal and its associated solicitations."""
+    success = delete_portal(portal_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Portal not found.")
+    return {"success": True, "message": "Portal successfully removed from monitoring."}
+
+@app.get("/api/monitor/solicitations", response_model=List[DiscoveredSolicitation])
+async def list_discovered_solicitations(category: Optional[str] = None, status: Optional[str] = None):
+    """Returns all discovered solicitations and change logs, optionally filtered by trade category or status."""
+    return get_all_solicitations(category=category, status=status)
+
+@app.post("/api/monitor/scan", response_model=ScanPortalsResponse)
+async def trigger_portal_scan():
+    """
+    Triggers an immediate proactive polling scan across all monitored government portals,
+    detects changes (new RFPs, addenda, deadline shifts), updates the database, and returns new events.
+    """
+    try:
+        result = scan_all_portals()
+        return result
+    except Exception as e:
+        logger.exception("Error during proactive portal scan")
+        raise HTTPException(status_code=500, detail=f"Failed to scan portals: {str(e)}")
+
+@app.post("/api/monitor/audit-discovered/{solicitation_id}", response_model=AnalyzeRFPResponse)
+async def audit_discovered_solicitation(solicitation_id: str):
+    """
+    1-Click Proactive Workflow:
+    Takes an auto-discovered solicitation from the database, retrieves its associated RFP document,
+    and runs the full CivicScribe multi-agent compliance audit & proposal generation pipeline.
+    """
+    start_time = time.time()
+    sol = get_solicitation_by_id(solicitation_id)
+    if not sol:
+        raise HTTPException(status_code=404, detail="Solicitation not found in database.")
+
+    pdf_path = sol.get("pdf_path")
+    if not pdf_path or not os.path.exists(pdf_path):
+        # Fallback to sample PDF if none specifically assigned
+        default_pdf = os.path.join(INPUT_DIR, "sample_city_parks_rfp.pdf")
+        if os.path.exists(default_pdf):
+            pdf_path = default_pdf
+        else:
+            raise HTTPException(status_code=400, detail="No RFP PDF document found for this solicitation to audit.")
+
+    try:
+        logger.info(f"Proactive 1-Click Audit started for discovered solicitation {sol['solicitation_number']}...")
+        compliance_matrix = await shred_rfp(pdf_path)
+        bid_draft = await draft_bid_packet(pdf_path, compliance_matrix)
+
+        docx_filename = generate_docx_proposal(
+            matrix=compliance_matrix,
+            draft=bid_draft,
+            output_dir=OUTPUT_DIR
+        )
+        download_url = f"/api/download/{docx_filename}"
+        elapsed = round(time.time() - start_time, 2)
+
+        # Update cached verdict in DB
+        update_solicitation_verdict(solicitation_id, compliance_matrix.verdict)
+
+        return AnalyzeRFPResponse(
+            success=True,
+            compliance_matrix=compliance_matrix,
+            bid_draft=bid_draft,
+            docx_filename=docx_filename,
+            download_url=download_url,
+            execution_time_seconds=elapsed,
+            message=f"Discovered RFP {sol['solicitation_number']} successfully audited. Verdict: {compliance_matrix.verdict}."
+        )
+    except Exception as e:
+        logger.exception(f"Error auditing discovered solicitation {solicitation_id}")
+        raise HTTPException(status_code=500, detail=f"Error auditing solicitation: {str(e)}")
