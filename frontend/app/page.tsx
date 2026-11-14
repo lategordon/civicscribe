@@ -101,6 +101,10 @@ export default function CivicScribeApp() {
   const [copiedSection, setCopiedSection] = useState(false);
   const [resolvedActions, setResolvedActions] = useState<Record<string, boolean>>({});
 
+  // Sub-view segment states for uncluttered focus
+  const [scorecardSubView, setScorecardSubView] = useState<"matrix" | "proposal" | "rubric">("matrix");
+  const [vaultSubTab, setVaultSubTab] = useState<"credentials" | "insurance" | "experience">("credentials");
+
   // Filter state for Disqualifiers Table
   const [disqualifierFilter, setDisqualifierFilter] = useState<"ALL" | "MET" | "VERIFY_MANUALLY" | "GAP">("ALL");
   const [selectedCitation, setSelectedCitation] = useState<DisqualifierItem | null>(null);
@@ -489,120 +493,102 @@ export default function CivicScribeApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* ----------------- CIVIC PRECISION HEADER / TOP NAV ----------------- */}
-      <header className="bg-[#0C1E3A] text-white border-b border-slate-700 sticky top-0 z-40 shadow-sm">
+      {/* ----------------- CLEAN SINGLE-ROW WORKSPACE HEADER ----------------- */}
+      <header className="bg-[#0C1E3A] text-white border-b border-slate-700/80 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo & Identity */}
-            <div className="flex items-center space-x-3.5 cursor-pointer" onClick={() => setViewMode("home")}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-[#1B365D] flex items-center justify-center border border-white/20 shadow-inner">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xl font-bold tracking-tight text-white">CivicScribe</span>
-                  <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30">
-                    Municipal GovTech
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 hidden sm:block">
-                  AI RFP Compliance Auditor & Bid Writer for Trade Contractors
-                </p>
-              </div>
-            </div>
-
-            {/* Back to Home Button & Active Verified Vendor Badge */}
+            {/* Brand Logo & Back to Home */}
             <div className="flex items-center space-x-3">
+              <div
+                className="flex items-center space-x-2.5 cursor-pointer"
+                onClick={() => setViewMode("home")}
+                title="Return to Homepage"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-[#1B365D] flex items-center justify-center border border-white/20">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-base font-extrabold tracking-tight text-white">CivicScribe</span>
+              </div>
+
+              <span className="text-slate-600 hidden sm:inline">/</span>
+
               <button
                 type="button"
                 onClick={() => setViewMode("home")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-all border border-white/15"
+                className="hidden sm:inline-block text-xs font-medium text-slate-300 hover:text-white transition-colors"
               >
-                <span>← Overview / Home</span>
+                ← Home
+              </button>
+            </div>
+
+            {/* 4 Clean Workspace Navigation Tabs */}
+            <nav className="flex items-center space-x-1 bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab("audit")}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                  activeTab === "audit"
+                    ? "bg-white text-[#0C1E3A] shadow-xs"
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-blue-500" />
+                <span>1. Ingestion</span>
               </button>
 
-              <div className="hidden lg:flex items-center space-x-3 text-xs bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/15 backdrop-blur-xs">
-                <div className="flex items-center space-x-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-slate-300">Verified Profile:</span>
-                  <span className="font-semibold text-white">
-                    {vault?.company_name || "Bay Vista Municipal Grounds, Inc."}
+              <button
+                onClick={() => setActiveTab("scorecard")}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                  activeTab === "scorecard"
+                    ? "bg-white text-[#0C1E3A] shadow-xs"
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>2. Scorecard & Draft</span>
+                {result && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("vault")}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                  activeTab === "vault"
+                    ? "bg-white text-[#0C1E3A] shadow-xs"
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5 text-purple-400" />
+                <span>3. Vault</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("monitor")}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                  activeTab === "monitor"
+                    ? "bg-white text-[#0C1E3A] shadow-xs"
+                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <Radio className="w-3.5 h-3.5 text-amber-400" />
+                <span>4. Radar</span>
+                {monitorOverview && monitorOverview.recent_changes_count > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500 text-slate-950">
+                    {monitorOverview.recent_changes_count}
                   </span>
-                </div>
-                <span className="text-white/20">|</span>
-                <span className="font-mono text-emerald-300 font-medium">CSLB #984210</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  96% Ready
-                </span>
-              </div>
+                )}
+              </button>
+            </nav>
+
+            {/* Verified Contractor Pill */}
+            <div className="hidden lg:flex items-center space-x-2 text-xs bg-white/10 px-3 py-1.5 rounded-xl border border-white/15">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-slate-300 truncate max-w-[140px] font-medium">
+                {vault?.company_name || "Bay Vista Grounds"}
+              </span>
+              <span className="text-slate-500">•</span>
+              <span className="font-mono text-emerald-300 text-[11px]">CSLB #984210</span>
             </div>
-          </div>
-
-          {/* Navigation Bar Tabs */}
-          <div className="flex space-x-2 border-t border-white/10 pt-1.5 pb-2.5 overflow-x-auto">
-            <button
-              onClick={() => setViewMode("home")}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide text-slate-300 hover:bg-white/10 hover:text-white transition-all shrink-0"
-            >
-              <span>🏠 Overview</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("monitor")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
-                activeTab === "monitor"
-                  ? "bg-white text-[#0C1E3A] shadow-md"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Radio className={`w-4 h-4 ${activeTab === "monitor" ? "text-emerald-600" : "text-amber-400"} animate-pulse`} />
-              <span>📡 Proactive Portal Monitor</span>
-              {monitorOverview && monitorOverview.recent_changes_count > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950">
-                  {monitorOverview.recent_changes_count} Updates
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("audit")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
-                activeTab === "audit"
-                  ? "bg-white text-[#0C1E3A] shadow-md"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <UploadCloud className="w-4 h-4 text-blue-600" />
-              <span>1. RFP Ingestion & Forensic Audit</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("scorecard")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
-                activeTab === "scorecard"
-                  ? "bg-white text-[#0C1E3A] shadow-md"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <FileCheck className="w-4 h-4 text-emerald-600" />
-              <span>2. Decision HUD & Proposal Studio</span>
-              {result && (
-                <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white animate-pulse">
-                  Ready
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("vault")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shrink-0 ${
-                activeTab === "vault"
-                  ? "bg-white text-[#0C1E3A] shadow-md"
-                  : "text-slate-200 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Building2 className="w-4 h-4 text-purple-500" />
-              <span>3. Company Vault & Readiness</span>
-            </button>
           </div>
         </div>
       </header>
@@ -868,42 +854,6 @@ export default function CivicScribeApp() {
                 </div>
               )}
             </div>
-
-            {/* Core Anti-Hallucination Features Strip */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#1B365D] flex items-center justify-center mb-3">
-                  <ShieldCheck className="w-5 h-5 text-blue-700" />
-                </div>
-                <h4 className="text-sm font-bold text-slate-900">Zero-Hallucination Guardrails</h4>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  The proposal-writing agent is strictly locked to verified Company Vault records. Unverified claims are flagged as{" "}
-                  <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono text-[10px] font-bold">
-                    [VENDOR ACTION REQUIRED]
-                  </code>.
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                  <Award className="w-5 h-5" />
-                </div>
-                <h4 className="text-sm font-bold text-slate-900">100-Point Rubric Optimization</h4>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Deconstructs agency scoring categories, point weights, and strategic win themes to maximize technical evaluation points.
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-3">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <h4 className="text-sm font-bold text-slate-900">Submission-Ready .docx Packaging</h4>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Outputs formatted Microsoft Word documents complete with Executive Summary, numbered technical responses, and compliance matrices.
-                </p>
-              </div>
-            </div>
           </div>
         )}
 
@@ -1029,40 +979,90 @@ export default function CivicScribeApp() {
                   </div>
                 </div>
 
-                {/* 2. FORENSIC AUDIT METRICS STRIP */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
-                    <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Disqualifiers</span>
-                    <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
-                      {result.compliance_matrix.disqualifiers.length} Audited
-                    </p>
-                    <span className="text-[10px] text-emerald-700 font-semibold">100% Statutory Criteria Checked</span>
-                  </div>
+                {/* FOCUSED SUB-VIEW SWITCHER: 3 Independent Workspaces */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white p-2 rounded-2xl shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setScorecardSubView("matrix")}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      scorecardSubView === "matrix"
+                        ? "bg-[#0C1E3A] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Shield className="w-4 h-4 text-emerald-400" />
+                    <span>1. Compliance & Disqualifiers Matrix ({result.compliance_matrix.disqualifiers.length})</span>
+                  </button>
 
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
-                    <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Scoring Rubric</span>
-                    <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
-                      {result.compliance_matrix.evaluation_rubric.length} Categories
-                    </p>
-                    <span className="text-[10px] text-blue-700 font-semibold">100 Points Total Weighted</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScorecardSubView("proposal")}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      scorecardSubView === "proposal"
+                        ? "bg-[#0C1E3A] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-blue-400" />
+                    <span>2. Proposal Studio & Paper Canvas ({result.bid_draft.sections.length} Sections)</span>
+                    {result.bid_draft.missing_evidence_flags.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-slate-950">
+                        {result.bid_draft.missing_evidence_flags.length} Action
+                      </span>
+                    )}
+                  </button>
 
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
-                    <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Drafted Sections</span>
-                    <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
-                      {result.bid_draft.sections.length} Sections
-                    </p>
-                    <span className="text-[10px] text-purple-700 font-semibold">Complete Technical Bid</span>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
-                    <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Vendor Action Items</span>
-                    <p className="text-2xl font-extrabold text-amber-600 mt-1">
-                      {result.bid_draft.missing_evidence_flags.length} Required
-                    </p>
-                    <span className="text-[10px] text-amber-800 font-semibold">Pre-Submission Verification</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScorecardSubView("rubric")}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      scorecardSubView === "rubric"
+                        ? "bg-[#0C1E3A] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Award className="w-4 h-4 text-purple-400" />
+                    <span>3. Scoring Rubric & Submittal Exhibits</span>
+                  </button>
                 </div>
+
+                {/* ================= SUB-VIEW 1: COMPLIANCE MATRIX ================= */}
+                {scorecardSubView === "matrix" && (
+                  <div className="space-y-6">
+                    {/* 2. FORENSIC AUDIT METRICS STRIP */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Disqualifiers</span>
+                        <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
+                          {result.compliance_matrix.disqualifiers.length} Audited
+                        </p>
+                        <span className="text-[10px] text-emerald-700 font-semibold">100% Statutory Criteria Checked</span>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Scoring Rubric</span>
+                        <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
+                          {result.compliance_matrix.evaluation_rubric.length} Categories
+                        </p>
+                        <span className="text-[10px] text-blue-700 font-semibold">100 Points Total Weighted</span>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Drafted Sections</span>
+                        <p className="text-2xl font-extrabold text-[#0C1E3A] mt-1">
+                          {result.bid_draft.sections.length} Sections
+                        </p>
+                        <span className="text-[10px] text-purple-700 font-semibold">Complete Technical Bid</span>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-center">
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Vendor Action Items</span>
+                        <p className="text-2xl font-extrabold text-amber-600 mt-1">
+                          {result.bid_draft.missing_evidence_flags.length} Required
+                        </p>
+                        <span className="text-[10px] text-amber-800 font-semibold">Pre-Submission Verification</span>
+                      </div>
+                    </div>
 
                 {/* 3. HARD DISQUALIFIERS COMPLIANCE MATRIX TABLE */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -1164,75 +1164,13 @@ export default function CivicScribeApp() {
                     </table>
                   </div>
                 </div>
-
-                {/* 4. SCORING RUBRIC & REQUIRED FORMS (2 COLUMNS) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Evaluation Rubric */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-5 h-5 text-blue-700" />
-                        <h3 className="font-bold text-slate-900 text-sm">Agency Scoring Rubric Strategy</h3>
-                      </div>
-                      <span className="text-xs text-slate-500 font-mono">100 Pts Total</span>
-                    </div>
-                    <div className="divide-y divide-slate-100 p-2">
-                      {result.compliance_matrix.evaluation_rubric.map((r, i) => (
-                        <div key={i} className="p-3.5 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-900 text-sm">{r.category}</span>
-                            <span className="px-2.5 py-0.5 rounded-full font-mono font-bold bg-blue-100 text-[#1B365D]">
-                              {r.weight_percentage}% Weight
-                            </span>
-                          </div>
-                          <p className="text-slate-600 mt-1">{r.description}</p>
-                          <div className="mt-2 p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 text-slate-700">
-                            <span className="font-bold text-[#1B365D]">Winning Strategy: </span>
-                            {r.recommended_strategy}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
+                )}
 
-                  {/* Required Submittal Forms Checklist */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileCheck className="w-5 h-5 text-emerald-700" />
-                        <h3 className="font-bold text-slate-900 text-sm">Required Submittal Exhibits</h3>
-                      </div>
-                      <span className="text-xs text-slate-500">Interactive Pre-Flight Checklist</span>
-                    </div>
-                    <div className="divide-y divide-slate-100 p-2">
-                      {result.compliance_matrix.required_forms.map((f, i) => (
-                        <div key={i} className="p-3 text-xs flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            defaultChecked={false}
-                            className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-0 mt-0.5 cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-900">{f.form_name}</span>
-                              {f.mandatory && (
-                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                  Mandatory
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-slate-600 mt-0.5">{f.description}</p>
-                            <p className="text-[11px] text-slate-500 italic mt-1">
-                              <strong>Submission Note:</strong> {f.submittal_instructions}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. SPLIT-SCREEN BID STUDIO ("PAPER CANVAS" PROPOSAL PREVIEW) */}
+                {/* ================= SUB-VIEW 2: PROPOSAL STUDIO ================= */}
+                {scorecardSubView === "proposal" && (
+                  <div className="space-y-6">
+                    {/* 5. SPLIT-SCREEN BID STUDIO ("PAPER CANVAS" PROPOSAL PREVIEW) */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   {/* Studio Header Bar */}
                   <div className="p-4 sm:p-5 bg-[#0C1E3A] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1480,8 +1418,80 @@ export default function CivicScribeApp() {
                     </div>
                   </div>
                 </div>
+                  </div>
+                )}
 
-                {/* 6. PRICING STRATEGY & PRE-FLIGHT SUBMISSION CHECKLIST */}
+                {/* ================= SUB-VIEW 3: RUBRIC & EXHIBITS ================= */}
+                {scorecardSubView === "rubric" && (
+                  <div className="space-y-6">
+                    {/* 4. SCORING RUBRIC & REQUIRED FORMS (2 COLUMNS) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Evaluation Rubric */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-5 h-5 text-blue-700" />
+                        <h3 className="font-bold text-slate-900 text-sm">Agency Scoring Rubric Strategy</h3>
+                      </div>
+                      <span className="text-xs text-slate-500 font-mono">100 Pts Total</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 p-2">
+                      {result.compliance_matrix.evaluation_rubric.map((r, i) => (
+                        <div key={i} className="p-3.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-sm">{r.category}</span>
+                            <span className="px-2.5 py-0.5 rounded-full font-mono font-bold bg-blue-100 text-[#1B365D]">
+                              {r.weight_percentage}% Weight
+                            </span>
+                          </div>
+                          <p className="text-slate-600 mt-1">{r.description}</p>
+                          <div className="mt-2 p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 text-slate-700">
+                            <span className="font-bold text-[#1B365D]">Winning Strategy: </span>
+                            {r.recommended_strategy}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Required Submittal Forms Checklist */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileCheck className="w-5 h-5 text-emerald-700" />
+                        <h3 className="font-bold text-slate-900 text-sm">Required Submittal Exhibits</h3>
+                      </div>
+                      <span className="text-xs text-slate-500">Interactive Pre-Flight Checklist</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 p-2">
+                      {result.compliance_matrix.required_forms.map((f, i) => (
+                        <div key={i} className="p-3 text-xs flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            defaultChecked={false}
+                            className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-0 mt-0.5 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-900">{f.form_name}</span>
+                              {f.mandatory && (
+                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                  Mandatory
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-slate-600 mt-0.5">{f.description}</p>
+                            <p className="text-[11px] text-slate-500 italic mt-1">
+                              <strong>Submission Note:</strong> {f.submittal_instructions}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                    {/* 6. PRICING STRATEGY & PRE-FLIGHT SUBMISSION CHECKLIST */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Pricing Strategy */}
                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
@@ -1514,6 +1524,8 @@ export default function CivicScribeApp() {
                     </ul>
                   </div>
                 </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1589,14 +1601,57 @@ export default function CivicScribeApp() {
               </div>
             )}
 
-            {vaultLoading ? (
+                        {/* SUB-VIEW SWITCHER: 3 Focused Vault Views */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white p-2 rounded-2xl shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setVaultSubTab("credentials")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  vaultSubTab === "credentials"
+                    ? "bg-[#0C1E3A] text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>1. Legal Entity & State Licenses ({editedVault?.licenses?.length || 0})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVaultSubTab("insurance")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  vaultSubTab === "insurance"
+                    ? "bg-[#0C1E3A] text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileCheck className="w-4 h-4 text-blue-400" />
+                <span>2. Insurance Limits & Safety Metrics (EMR {editedVault?.safety_metrics?.experience_modification_rate_emr})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVaultSubTab("experience")}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  vaultSubTab === "experience"
+                    ? "bg-[#0C1E3A] text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Briefcase className="w-4 h-4 text-purple-400" />
+                <span>3. Key Personnel & Past Performance ({editedVault?.municipal_past_performance?.length || 0} Contracts)</span>
+              </button>
+            </div>
+
+{vaultLoading ? (
               <div className="text-center py-16 text-slate-500">
                 <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-700 mb-2" />
                 <p className="text-xs font-medium">Loading verified Company Vault...</p>
               </div>
             ) : editedVault ? (
               <div className="space-y-6">
-                {/* 1. Entity Identification & State Licenses */}
+                {/* SUB-TAB 1: LEGAL ENTITY & LICENSES */}
+                {vaultSubTab === "credentials" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Entity Information */}
                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
@@ -1701,8 +1756,10 @@ export default function CivicScribeApp() {
                     </div>
                   </div>
                 </div>
+                )}
 
-                {/* 2. Insurance Coverage & Small Business Certifications */}
+                {/* SUB-TAB 2: INSURANCE & SAFETY */}
+                {vaultSubTab === "insurance" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Digital COI Cards */}
                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
@@ -1805,8 +1862,11 @@ export default function CivicScribeApp() {
                     </div>
                   </div>
                 </div>
+                )}
 
-                {/* 3. Verified Key Personnel */}
+                {/* SUB-TAB 3: KEY PERSONNEL & PAST PERFORMANCE */}
+                {vaultSubTab === "experience" && (
+                  <div className="space-y-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                   <h3 className="font-bold text-[#0C1E3A] text-sm flex items-center gap-2 border-b pb-2.5">
                     <Users className="w-4 h-4 text-blue-700" />
@@ -1825,7 +1885,7 @@ export default function CivicScribeApp() {
                   </div>
                 </div>
 
-                {/* 4. Municipal Past Performance Contracts */}
+                    {/* 4. Municipal Past Performance Contracts */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                   <h3 className="font-bold text-[#0C1E3A] text-sm flex items-center gap-2 border-b pb-2.5">
                     <Briefcase className="w-4 h-4 text-emerald-600" />
@@ -1861,6 +1921,8 @@ export default function CivicScribeApp() {
                     ))}
                   </div>
                 </div>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
