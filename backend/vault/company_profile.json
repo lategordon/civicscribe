@@ -1,0 +1,210 @@
+{
+  "company_name": "Bay Vista Municipal Grounds & Facilities, Inc.",
+  "dba": "Bay Vista Environmental Services",
+  "fein": "94-3829104",
+  "cage_code": "8K4F1",
+  "address": {
+    "street": "1425 Industrial Way, Suite 200",
+    "city": "San Leandro",
+    "state": "CA",
+    "zip": "94577",
+    "county": "Alameda County"
+  },
+  "contact": {
+    "primary_contact_name": "Marcus Vance",
+    "title": "Director of Operations & Principal",
+    "email": "rfp-team@bayvistamaintenance.com",
+    "phone": "(510) 555-0198",
+    "website": "https://www.bayvistamaintenance.com"
+  },
+  "business_structure": {
+    "entity_type": "California Corporation (C-Corp)",
+    "year_established": 2012,
+    "years_in_business": 14,
+    "union_status": "Non-Union, 100% Certified Prevailing Wage Compliant"
+  },
+  "licenses": [
+    {
+      "type": "California Contractors State License Board (CSLB)",
+      "license_number": "984210",
+      "classifications": [
+        "C-27 Landscaping Contractor",
+        "B General Building Contractor"
+      ],
+      "status": "Active & In Good Standing",
+      "qualifying_individual": "Marcus Vance",
+      "expiration_date": "2027-08-31"
+    },
+    {
+      "type": "California Department of Pesticide Regulation (DPR)",
+      "license_number": "QL-41982",
+      "classifications": [
+        "Qualified Applicator License (QAL) - Category B Landscape Maintenance"
+      ],
+      "status": "Active",
+      "qualifying_individual": "Elena Rostova",
+      "expiration_date": "2027-12-31"
+    }
+  ],
+  "certifications": [
+    {
+      "title": "California DGS Certified Small Business (SB/Micro)",
+      "cert_number": "2018492",
+      "issuing_agency": "California Department of General Services (DGS)",
+      "valid_through": "2027-04-30",
+      "eligible_for_sb_preference": true
+    },
+    {
+      "title": "Alameda County Small Local Emerging Business (SLEB)",
+      "cert_number": "14-00122",
+      "issuing_agency": "Alameda County Auditor-Controller Agency",
+      "valid_through": "2026-11-30",
+      "eligible_for_sb_preference": true
+    },
+    {
+      "title": "City of Oakland Local Business Enterprise (LBE)",
+      "cert_number": "LBE-9941",
+      "issuing_agency": "City of Oakland Department of Workplace & Employment Standards",
+      "valid_through": "2027-01-15",
+      "eligible_for_sb_preference": true
+    }
+  ],
+  "public_works_registration": {
+    "dir_number": "PW-CR-1000849201",
+    "agency": "California Department of Industrial Relations (DIR)",
+    "status": "Active & In Good Standing",
+    "certified_payroll_system": "eCPR (Electronic Certified Payroll Records) via LCPtracker & DIR Portal",
+    "expiration_date": "2027-06-30"
+  },
+  "insurance": {
+    "commercial_general_liability": {
+      "carrier": "Travelers Casualty and Surety Company",
+      "policy_number": "GL-8823104-B",
+      "each_occurrence_limit": "$2,000,000",
+      "general_aggregate_limit": "$4,000,000",
+      "products_completed_operations_aggregate": "$4,000,000",
+      "additional_insured_endorsement_form": "CG 20 10 04 13 & CG 20 37 04 13 (Blanket Municipal Endorsement)",
+      "primary_non_contributory": true,
+      "waiver_of_subrogation": true,
+      "expiration_date": "2027-05-15"
+    },
+    "automobile_liability": {
+      "carrier": "Travelers Casualty and Surety Company",
+      "policy_number": "CA-9934120-A",
+      "combined_single_limit": "$2,000,000",
+      "coverage_applies_to": "Any Auto (Owned, Hired, and Non-Owned Autos)",
+      "expiration_date": "2027-05-15"
+    },
+    "workers_compensation": {
+      "carrier": "State Compensation Insurance Fund of California",
+      "policy_number": "WC-491028-CA",
+      "statutory_limits": true,
+      "employers_liability_each_accident": "$1,000,000",
+      "employers_liability_disease_policy_limit": "$1,000,000",
+      "employers_liability_disease_each_employee": "$1,000,000",
+      "waiver_of_subrogation": true,
+      "expiration_date": "2027-05-15"
+    },
+    "umbrella_excess_liability": {
+      "carrier": "Great American Insurance Company",
+      "policy_number": "UMB-1049281",
+      "each_occurrence_limit": "$5,000,000",
+      "aggregate_limit": "$5,000,000",
+      "expiration_date": "2027-05-15"
+    }
+  },
+  "bonding": {
+    "surety_company": "Hartford Fire Insurance Company",
+    "broker": "Alliant Insurance Services, Inc.",
+    "single_project_bonding_capacity": "$3,500,000",
+    "aggregate_bonding_capacity": "$10,000,000",
+    "current_available_capacity": "$8,200,000",
+    "can_issue_bid_bond_p_and_p": true
+  },
+  "key_personnel": [
+    {
+      "name": "Marcus Vance",
+      "role": "Principal-in-Charge & Operations Director",
+      "experience_years": 18,
+      "certifications": [
+        "CSLB C-27 & Class B Qualifier",
+        "OSHA-30 Construction Safety Certification"
+      ],
+      "bio": "18+ years leading municipal facility operations, park maintenance, and civic landscaping programs throughout Alameda and Contra Costa Counties."
+    },
+    {
+      "name": "Elena Rostova",
+      "role": "Environmental Health, Safety & Sustainability Officer",
+      "experience_years": 14,
+      "certifications": [
+        "California DPR Qualified Applicator License (QAL #41982)",
+        "ISA Certified Arborist (WE-9812A)",
+        "Bay-Friendly Qualified Landscape Professional"
+      ],
+      "bio": "Specialist in integrated pest management (IPM), water-efficient irrigation audits (MWELO), and ecological wildfire fuel abatement."
+    },
+    {
+      "name": "David Chen",
+      "role": "Field Operations Superintendent & Quality Control Manager",
+      "experience_years": 12,
+      "certifications": [
+        "OSHA-30 Certified",
+        "First Aid / CPR / AED Certified",
+        "Traffic Control & Flagger Safety Instructor"
+      ],
+      "bio": "Oversees daily field crews across municipal parks, arterial medians, and civic facilities with a continuous 100% zero-lost-time safety record."
+    },
+    {
+      "name": "Maria Hernandez",
+      "role": "Public Works Compliance Officer & Certified Payroll Administrator",
+      "experience_years": 10,
+      "certifications": [
+        "Certified Prevailing Wage Specialist (CPWS)",
+        "LCPtracker Certified Administrator"
+      ],
+      "bio": "Manages DIR eCPR electronic payroll compliance, apprenticeship ratios, and disadvantaged business subcontracting reporting."
+    }
+  ],
+  "safety_metrics": {
+    "experience_modification_rate_emr": "0.78",
+    "three_year_average_emr": "0.81",
+    "lost_workday_incident_rate_lwir": "0.00",
+    "osha_recordables_past_3_years": 0,
+    "has_written_iipp": true,
+    "has_tailgate_safety_meetings_weekly": true
+  },
+  "municipal_past_performance": [
+    {
+      "contract_name": "City of Fremont: Citywide Parks & Civic Center Landscape Maintenance",
+      "solicitation_number": "PR-2022-048",
+      "agency": "City of Fremont - Community Services / Parks Division",
+      "contract_term": "July 1, 2022 - June 30, 2025 (with two 1-year renewal options)",
+      "annual_contract_value": "$485,000",
+      "total_value": "$1,455,000",
+      "scope_of_work": "Comprehensive routine and preventative grounds maintenance across 14 municipal parks and the civic center complex. Included turf aeration, smart WeatherTRAK irrigation management, organic weed control, shrub and tree care, litter pickup, and 24/7 storm emergency response.",
+      "key_outcomes": "Zero safety incidents across 36 months, 99.4% SLA adherence on service requests, and achieved 18% municipal water reduction through smart controller optimization.",
+      "client_reference": {
+        "name": "Sarah Jenkins",
+        "title": "Parks Maintenance Superintendent",
+        "phone": "(510) 555-4920",
+        "email": "sjenkins@fremont.gov"
+      }
+    },
+    {
+      "contract_name": "City of San Mateo: Municipal Facilities Vegetation Management & Fire Abatement",
+      "solicitation_number": "PW-2021-089",
+      "agency": "City of San Mateo - Public Works Department",
+      "contract_term": "October 1, 2021 - December 31, 2024",
+      "annual_contract_value": "$340,000",
+      "total_value": "$1,020,000",
+      "scope_of_work": "Wildland-urban interface (WUI) fuel reduction, roadway median maintenance, retention basin vegetation clearance, and defensible space abatement across 22 city-owned open space parcels and civic facility perimeters.",
+      "key_outcomes": "Completed all annual pre-fire season abatement quotas 2 weeks ahead of scheduled deadlines; 100% compliant electronic certified payroll records on DIR eCPR portal.",
+      "client_reference": {
+        "name": "Raymond Silva",
+        "title": "Public Works Maintenance Supervisor",
+        "phone": "(650) 555-2241",
+        "email": "rsilva@cityofsanmateo.org"
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+*/node_modules/
+venv/
+*/venv/
+.venv/
+*/.venv/
+
+# Environment variables & secrets
+.env
+*.env
+.env*
+!.env.example
+*.pem
+
+# Next.js & Frontend builds
+.next/
+*/.next/
+out/
+*/out/
+build/
+*/build/
+dist/
+*/dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python bytecode & caches
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Runtime generated uploads and bids
+backend/input_rfps/upload_*
+backend/output_bids/*.docx
+backend/output_bids/*.pdf
+
+# OS files
+.DS_Store
+*/.DS_Store
+Thumbs.db
